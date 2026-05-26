@@ -30,12 +30,13 @@ table th {
 
     <br>
     <a href="/download_clean/{{ clean_filename }}" class="btn btn-success mt-3">下载清洗后的文件</a>
+
+    <!-- ✅ 这里固定用原始文件名，实现叠加清洗 -->
+    <a href="/config/{{ filename }}" class="btn btn-danger mt-3 ms-2">继续配置清洗规则</a>
+
+    <a href="/visualize" class="btn btn-warning mt-3 ms-2">进入可视化分析</a>
+    <a href="/" class="btn btn-primary mt-3 ms-2">返回上传页面</a>
     {% endif %}
 
-     <!-- ========== 这里！！插入可视化按钮 ========== -->
-    <a href="/visualize" class="btn btn-warning mt-3 ms-2">进入可视化分析</a>
-
-    <br>
-    <a href="/" class="btn btn-primary mt-3">返回上传页面</a>
 </body>
 </html>
