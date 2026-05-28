@@ -1,24 +1,25 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>历史记录</title>
-</head>
-<body>
-    <h2>我的操作历史</h2>
+{% extends "base.html" %}
 
-    <form action="/search" method="post">
-        <input name="keyword" placeholder="输入关键词检索">
-        <button>检索</button>
+{% block content %}
+<div class="card p-4">
+    <h2 class="mb-4">我的操作历史</h2>
+
+    <form action="/search" method="post" class="d-flex mb-4">
+        <input name="keyword" class="form-control me-2" placeholder="输入关键词检索" style="width: 300px;">
+        <button class="btn btn-outline-primary">检索</button>
     </form>
 
-    {% for r in records %}
-    <div>
-        {{r.time}} | {{r.user}} | {{r.action}}
+    <div class="list-group">
+        {% for r in records %}
+        <div class="list-group-item">
+            <span class="badge bg-secondary me-2">{{r.time}}</span>
+            <strong>{{r.user}}</strong> : {{r.action}}
+        </div>
+        {% endfor %}
     </div>
-    {% endfor %}
 
-<br>
-<a href="/">返回首页</a>
-</body>
-</html>
+    <div class="mt-4">
+        <a href="/" class="btn btn-link">返回首页</a>
+    </div>
+</div>
+{% endblock %}

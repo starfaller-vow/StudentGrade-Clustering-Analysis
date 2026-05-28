@@ -1,28 +1,111 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>清洗规则配置</title>
-</head>
-<body>
-<h2>自动化清洗规则配置</h2>
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2 class="text-center mb-4">自动化清洗规则配置</h2>
+
 <form action="/save_config" method="post">
+
+    <!-- 隐藏文件名 -->
     <input type="hidden" name="filename" value="{{ filename }}">
 
-    <h4>数值范围</h4>
-    最小值：<input type="number" name="min_val" value="0" required><br>
-    最大值：<input type="number" name="max_val" value="100" required><br>
+    <!-- 数值范围 -->
+    <div class="mb-4">
+        <h4 class="mb-3">数值范围设置</h4>
 
-    <h4>功能开关</h4>
-    <label><input type="checkbox" name="remove_outliers" checked> 删除异常值</label><br>
-    <label><input type="checkbox" name="fill_missing" checked> 填充缺失值</label><br>
+        <div class="row">
+            <div class="col-md-6">
+                <label class="form-label">最小值</label>
+                <input type="number"
+                       name="min_val"
+                       value="0"
+                       class="form-control"
+                       required>
+            </div>
 
-    <h4>选择要清洗的列</h4>
-    {% for col in columns %}
-    <label><input type="checkbox" name="clean_cols" value="{{ col }}" checked> {{ col }}</label><br>
-    {% endfor %}
+            <div class="col-md-6">
+                <label class="form-label">最大值</label>
+                <input type="number"
+                       name="max_val"
+                       value="100"
+                       class="form-control"
+                       required>
+            </div>
+        </div>
+    </div>
 
-    <br><br>
-    <button type="submit">保存并应用规则</button>
+    <!-- 功能开关 -->
+    <div class="mb-4">
+        <h4 class="mb-3">功能开关</h4>
+
+        <div class="form-check mb-2">
+            <input class="form-check-input"
+                   type="checkbox"
+                   name="remove_outliers"
+                   checked>
+
+            <label class="form-check-label">
+                删除异常值
+            </label>
+        </div>
+
+        <div class="form-check">
+            <input class="form-check-input"
+                   type="checkbox"
+                   name="fill_missing"
+                   checked>
+
+            <label class="form-check-label">
+                填充缺失值
+            </label>
+        </div>
+    </div>
+
+    <!-- 清洗列 -->
+    <div class="mb-4">
+        <h4 class="mb-3">选择要清洗的列</h4>
+
+        <div class="row">
+            {% for col in columns %}
+
+            <div class="col-md-4 mb-2">
+
+                <div class="form-check">
+
+                    <input class="form-check-input"
+                           type="checkbox"
+                           name="clean_cols"
+                           value="{{ col }}"
+                           checked>
+
+                    <label class="form-check-label">
+                        {{ col }}
+                    </label>
+
+                </div>
+
+            </div>
+
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- 按钮 -->
+    <div class="mt-4">
+
+        <button type="submit"
+                class="btn btn-primary">
+            保存并应用规则
+        </button>
+
+        <a href="/"
+           class="btn btn-secondary ms-2">
+            返回首页
+        </a>
+
+    </div>
+
 </form>
-</body>
-</html>
+{% endblock %}
+

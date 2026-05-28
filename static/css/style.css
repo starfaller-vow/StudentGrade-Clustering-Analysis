@@ -1,0 +1,74 @@
+/* 全局样式重置 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: "Microsoft YaHei", sans-serif;
+    background-color: #f8f9fa;
+    line-height: 1.6;
+}
+
+/* 导航栏美化 */
+.navbar {
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* 卡片样式（用于数据展示、结果面板） */
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+    transition: transform 0.2s;
+}
+.card:hover {
+    transform: translateY(-3px);
+}
+
+/* 按钮美化 */
+.btn-primary {
+    background-color: #409eff;
+    border-color: #409eff;
+    border-radius: 20px;
+    padding: 8px 20px;
+}
+.btn-primary:hover {
+    background-color: #66b1ff;
+    border-color: #66b1ff;
+}
+
+/* 加载动画 */
+.loading {
+    display: none;
+    text-align: center;
+    margin: 20px 0;
+}
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+.chart-card {
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.06);
+}
+
+.chart-box {
+    width: 100%;
+    height: 420px;
+}
+/* 表格美化 */ table { border-radius: 8px; overflow: hidden; background: #ffffff; }
+table th { background-color: #409eff !important; color: white; text-align: center; vertical-align: middle; }
+table td { text-align: center; vertical-align: middle; }
+/* 页面标题 */ h2 { font-weight: 700; color: #333; }
+h4 { color: #555; }
+/* 表单区域 */ .form-control { border-radius: 10px; }
+/* 次级按钮圆角 */ .btn { border-radius: 20px; }
+/* 页面动画 */ .card { animation: fadeIn 0.4s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); }to {
+    opacity: 1;
+    transform: translateY(0);
+}}

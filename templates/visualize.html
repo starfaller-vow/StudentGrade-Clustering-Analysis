@@ -1,90 +1,198 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <title>成绩数据可视化</title>
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
-    <style>
-        body { font-family: "微软雅黑"; margin: 30px; }
-        h2 { text-align: center; margin-bottom: 30px; }
-        .chart-box { width: 90%; height: 400px; margin: 40px auto; border:1px solid #eee; padding:10px; }
-        .back-btn { margin-left: 5%; padding:8px 16px; cursor:pointer; }
-    </style>
-</head>
-<body>
-    <h2>学生成绩可视化分析</h2>
-    <a href="/cluster" class="btn btn-info mt-3 mb-3">进入K-Means聚类分析</a>
-    <button class="back-btn" onclick="history.back()">返回清洗页面</button>
-    <!-- 图1：柱状图 - 每人各科成绩对比 -->
-    <div id="barChart" class="chart-box"></div>
-    <!-- 图2：折线图 - 各科平均分 -->
-    <div id="lineChart" class="chart-box"></div>
-    <!-- 图3：散点图 - Python成绩 vs 总分 -->
-    <div id="scatterChart" class="chart-box"></div>
+{% extends "base.html" %}
 
-    <script>
-        // 后端传来的清洗后数据（格式固定，我帮你写好）
-        const data = {
-            names: ["朱佳","李思","郑君","王雪","罗明"],
-            subjects: ["C语言","Java","Python","VB","C++"],
-            scores: [
-                [75.2,93,66,85,88],
-                [86,76,96,93,67],
-                [88.8,98,76,82.25,89],
-                [99,96,91,88,86],
-                [95,96,85,63,91]
-            ],
-            totals: [407,418,263,460,430],
-            pythonScore: [66,96,76,91,85]
-        };
+{% block content %}
 
-        // ========== 1. 柱状图 ==========
-        const barChart = echarts.init(document.getElementById('barChart'));
-        let barSeries = [];
-        data.subjects.forEach((sub,i)=>{
-            barSeries.push({
-                name: sub,
-                type: 'bar',
-                data: data.scores.map(item=>item[i])
-            })
-        })
-        barChart.setOption({
-            title: { text: '每位学生各科成绩对比', left:'center' },
-            tooltip: { trigger: 'axis' },
-            legend: { data: data.subjects, top:30 },
-            xAxis: { type:'category', data: data.names },
-            yAxis: { type:'value', min:0, max:100 },
-            series: barSeries
-        })
+<div class="card p-4">
 
-        // ========== 2. 折线图 - 各科平均分 ==========
-        const lineChart = echarts.init(document.getElementById('lineChart'));
-        let avgScore = data.subjects.map((_,i)=>{
-            let sum = 0;
-            data.scores.forEach(s=>sum+=s[i]);
-            return (sum/data.scores.length).toFixed(2);
-        })
-        lineChart.setOption({
-            title: { text: '各科平均分对比', left:'center' },
-            tooltip: { trigger: 'axis' },
-            xAxis: { type:'category', data: data.subjects },
-            yAxis: { type:'value', min:0, max:100 },
-            series: [{ type:'line', data:avgScore, smooth:true, markPoint:{data:[{type:'max'},{type:'min'}]} }]
-        })
+    <h2 class="text-center mb-3">学生成绩可视化分析</h2>
 
-        // ========== 3. 散点图 - Python成绩 vs 总分 ==========
-        const scatterChart = echarts.init(document.getElementById('scatterChart'));
-        let scatterData = data.names.map((name,i)=>[data.pythonScore[i], data.totals[i], name]);
-        scatterChart.setOption({
-            title: { text: 'Python成绩 — 总分相关性散点图', left:'center' },
-            tooltip: {
-                trigger: 'item',
-                formatter: params=>`${params.data[2]}<br>Python:${params.data[0]}<br>总分:${params.data[1]}`
-            },
-            xAxis: { name:'Python成绩', min:60, max:100 },
-            yAxis: { name:'总分', min:250, max:470 },
-            series: [{ type:'scatter', data:scatterData, symbolSize:12 }]
-        })
-    </script>
-</body>
-</html>
+    <p class="text-center text-muted mb-4">
+        通过柱状图、折线图和散点图展示学生成绩分布与科目表现。
+    </p>
+
+    <div class="text-center mb-4">
+        <a href="/cluster" class="btn btn-info">
+            进入 K-Means 聚类分析
+        </a>
+
+        <button class="btn btn-secondary ms-2" onclick="history.back()">
+            返回清洗页面
+        </button>
+    </div>
+
+    <div class="chart-card mb-4">
+        <div id="barChart" class="chart-box"></div>
+    </div>
+
+    <div class="chart-card mb-4">
+        <div id="lineChart" class="chart-box"></div>
+    </div>
+
+    <div class="chart-card mb-4">
+        <div id="scatterChart" class="chart-box"></div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block script %}
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+
+<script>
+    const data = {
+        names: ["朱佳","李思","郑君","王雪","罗明"],
+        subjects: ["C语言","Java","Python","VB","C++"],
+        scores: [
+            [75.2,93,66,85,88],
+            [86,76,96,93,67],
+            [88.8,98,76,82.25,89],
+            [99,96,91,88,86],
+            [95,96,85,63,91]
+        ],
+        totals: [407,418,263,460,430],
+        pythonScore: [66,96,76,91,85]
+    };
+
+    // 柱状图：每人各科成绩对比
+    const barChart = echarts.init(document.getElementById('barChart'));
+    let barSeries = [];
+
+    data.subjects.forEach((sub, i) => {
+        barSeries.push({
+            name: sub,
+            type: 'bar',
+            data: data.scores.map(item => item[i])
+        });
+    });
+
+    barChart.setOption({
+        title: {
+            text: '每位学生各科成绩对比',
+            left: 'center'
+        },
+        tooltip: {
+            trigger: 'axis'
+        },
+        legend: {
+            data: data.subjects,
+            top: 30
+        },
+        grid: {
+            top: 90,
+            left: 60,
+            right: 30,
+            bottom: 50
+        },
+        xAxis: {
+            type: 'category',
+            data: data.names
+        },
+        yAxis: {
+            type: 'value',
+            min: 0,
+            max: 100
+        },
+        series: barSeries
+    });
+
+    // 折线图：各科平均分
+    const lineChart = echarts.init(document.getElementById('lineChart'));
+
+    let avgScore = data.subjects.map((_, i) => {
+        let sum = 0;
+        data.scores.forEach(s => sum += s[i]);
+        return (sum / data.scores.length).toFixed(2);
+    });
+
+    lineChart.setOption({
+        title: {
+            text: '各科平均分对比',
+            left: 'center'
+        },
+        tooltip: {
+            trigger: 'axis'
+        },
+        grid: {
+            top: 80,
+            left: 60,
+            right: 30,
+            bottom: 50
+        },
+        xAxis: {
+            type: 'category',
+            data: data.subjects
+        },
+        yAxis: {
+            type: 'value',
+            min: 0,
+            max: 100
+        },
+        series: [
+            {
+                type: 'line',
+                data: avgScore,
+                smooth: true,
+                markPoint: {
+                    data: [
+                        { type: 'max' },
+                        { type: 'min' }
+                    ]
+                }
+            }
+        ]
+    });
+
+    // 散点图：Python成绩 vs 总分
+    const scatterChart = echarts.init(document.getElementById('scatterChart'));
+
+    let scatterData = data.names.map((name, i) => [
+        data.pythonScore[i],
+        data.totals[i],
+        name
+    ]);
+
+    scatterChart.setOption({
+        title: {
+            text: 'Python成绩 — 总分相关性散点图',
+            left: 'center'
+        },
+        tooltip: {
+            trigger: 'item',
+            formatter: params => `${params.data[2]}<br>Python：${params.data[0]}<br>总分：${params.data[1]}`
+        },
+        grid: {
+            top: 80,
+            left: 70,
+            right: 40,
+            bottom: 60
+        },
+        xAxis: {
+            name: 'Python成绩',
+            min: 60,
+            max: 100
+        },
+        yAxis: {
+            name: '总分',
+            min: 250,
+            max: 470
+        },
+        series: [
+            {
+                type: 'scatter',
+                data: scatterData,
+                symbolSize: 12
+            }
+        ]
+    });
+
+    // 页面大小变化时，图表自适应
+    window.addEventListener('resize', function () {
+        barChart.resize();
+        lineChart.resize();
+        scatterChart.resize();
+    });
+</script>
+
+{% endblock %}

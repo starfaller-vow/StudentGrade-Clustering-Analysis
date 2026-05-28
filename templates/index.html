@@ -1,34 +1,35 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <title>数据分析系统</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .table th, .table td {
-            text-align: center;
-            vertical-align: middle;
-        }
-        .table {
-            width: 100%;
-            margin: 0 auto;
-        }
-    </style>
-</head>
-<body class="container mt-5">
+{% extends "base.html" %}
+
+{% block content %}
+
     <h2 class="text-center">文件上传与预览</h2>
     <form method="post" enctype="multipart/form-data" class="mt-4">
         <input type="file" name="file" class="form-control mb-3" accept=".csv,.xlsx">
         <button type="submit" class="btn btn-primary">上传并预览</button>
     </form>
     {% if table_html %}
-        <h4 class="mt-4">数据预览</h4>
+         <h4 class="mt-4 mb-3">数据预览</h4>
+
+    <div class="table-responsive">
         {{ table_html|safe }}
-        <div class="mt-3">
-            <a href="/download/{{filename}}" class="btn btn-success">下载原文件</a>
-            <a href="/config/{{ filename }}" class="btn btn-warning">清洗规则配置</a>
-        </div>
-    {% endif %}
-    <a href="/history" class="btn btn-secondary mt-3">查看我的历史记录</a>
-</body>
-</html>
+    </div>
+
+    <div class="mt-3">
+        <a href="/download/{{filename}}"
+           class="btn btn-success">
+            下载原文件
+        </a>
+
+        <a href="/config/{{ filename }}"
+           class="btn btn-warning ms-2">
+            清洗规则配置
+        </a>
+    </div>
+
+{% endif %}
+
+<a href="/history"
+   class="btn btn-secondary mt-4">
+    查看我的历史记录
+</a>
+{% endblock %}

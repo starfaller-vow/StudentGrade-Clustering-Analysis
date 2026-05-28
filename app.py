@@ -112,7 +112,8 @@ def search_record():
 def index():
     if 'current_user' not in session:
         return redirect('/login')
-
+    table_html = None
+    filename = None
     if request.method == 'POST':
         file = request.files['file']
         filename = file.filename
@@ -274,6 +275,7 @@ def download_clean(clean_filename):
         df.to_csv(save_path, index=False, encoding='utf-8')
     else:
         df.to_excel(save_path, index=False)
+    add_history(session.get('current_user', '未登录用户'), f"下载清洗后文件：{clean_filename}")
 
     return f'<h3>✅ 文件已成功保存</h3><p>路径：outputs/{clean_filename}</p><a href="/">返回首页</a>'
 
@@ -312,7 +314,10 @@ def cluster_analysis():
     df['学生等级'] = df['标签'].map(rank_map)
     df = df.drop(columns=['标签'])
 
-    return render_template('cluster.html', cluster_table=df.to_html(index=False))
+    return render_template(
+    'cluster.html',
+    cluster_table=df.to_html(classes="table table-striped table-hover", index=False)
+)
 
 
 # ==============================
