@@ -91,15 +91,37 @@ def show_history():
     if 'current_user' not in session:
         return redirect('/login')
     current_user = session['current_user']
-    user_history = [item for item in history_list if item['user'] == current_user]
-    return render_template('history.html', records=user_history)
+
+    # 管理员查看全部，普通用户只看自己的
+    if current_user == 'admin':
+        records = history_list
+    else:
+        records = [item for item in history_list if item['user'] == current_user]
+
+    return render_template('history.html', records=records, current_user=current_user, users=list(users.keys()))
 
 # 搜索历史记录
 @app.route('/search', methods=['POST'])
 def search_record():
-    keyword = request.form['keyword']
-    results = [item for item in history_list if keyword in item['user'] or keyword in item['action']]
-    return render_template('history.html', records=results, search_tip=f"关键词：{keyword}")
+    # 支持关键词、用户、起止日期筛选
+    keyword = request.form.get('keyword', '').strip()
+    user = request.form.get('user', '').strip()
+    date_from = request.form.get('date_from', '').strip()
+    date_to = request.form.get('date_to', '').strip()
+
+    results = history_list
+    if user:
+        results = [r for r in results if r['user'] == user]
+    if keyword:
+        results = [r for r in results if keyword in r['user'] or keyword in r['action']]
+    # 处理日期范围（字符串比较在 YYYY-MM-DD HH:MM:SS 格式下可行）
+    if date_from:
+        results = [r for r in results if r['time'] >= date_from]
+    if date_to:
+        results = [r for r in results if r['time'] <= date_to + ' 23:59:59']
+
+    current_user = session.get('current_user')
+    return render_template('history.html', records=results, current_user=current_user, users=list(users.keys()), search_tip=f"关键词：{keyword}" if keyword else '')
 
 
 # ==============================
@@ -184,6 +206,9 @@ def save_config():
         'fill_missing': request.form.get('fill_missing') == 'on',
         'clean_cols': request.form.getlist('clean_cols')
     }
+    # 记录保存规则操作
+    if 'current_user' in session:
+        add_history(session['current_user'], f"保存清洗规则：{filename}")
     return redirect(f'/clean/{filename}')
 
 # 执行数据清洗
@@ -212,6 +237,10 @@ def clean_data(filename):
 
     # 保存清洗结果
     session['current_clean_df'] = df.to_json(orient='split')
+
+    # 记录清洗操作
+    if 'current_user' in session:
+        add_history(session['current_user'], f"执行清洗：{filename}")
 
     return render_template('clean.html',
                            clean_table=df.to_html(classes="table table-striped", index=False),
@@ -244,6 +273,8 @@ def download_original(filename):
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     if not os.path.exists(file_path):
         return "文件不存在！"
+    if 'current_user' in session:
+        add_history(session['current_user'], f"下载原始文件：{filename}")
     return send_file(file_path, as_attachment=True, download_name=filename)
 
 # 下载清洗后文件
@@ -276,6 +307,10 @@ def download_clean(clean_filename):
     else:
         df.to_excel(save_path, index=False)
     add_history(session.get('current_user', '未登录用户'), f"下载清洗后文件：{clean_filename}")
+
+    # 记录下载清洗后文件操作（保存/导出）
+    if 'current_user' in session:
+        add_history(session['current_user'], f"导出清洗文件：{clean_filename}")
 
     return f'<h3>✅ 文件已成功保存</h3><p>路径：outputs/{clean_filename}</p><a href="/">返回首页</a>'
 
