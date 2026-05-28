@@ -5,12 +5,33 @@
     <title>历史记录</title>
 </head>
 <body>
-    <h2>我的操作历史</h2>
+    <h2>历史记录</h2>
+
+    <div>
+        当前用户：{{ current_user }} &nbsp; <a href="/logout">退出</a>
+    </div>
 
     <form action="/search" method="post">
-        <input name="keyword" placeholder="输入关键词检索">
+        关键词：<input name="keyword" placeholder="输入关键词检索">
+        {% if current_user == 'admin' %}
+        用户：
+        <select name="user">
+            <option value="">全部</option>
+            {% for u in users %}
+            <option value="{{u}}">{{u}}</option>
+            {% endfor %}
+        </select>
+        {% endif %}
+        起始日期：<input type="date" name="date_from">
+        结束日期：<input type="date" name="date_to">
         <button>检索</button>
     </form>
+
+    <hr>
+
+    {% if search_tip %}
+    <div><strong>{{ search_tip }}</strong></div>
+    {% endif %}
 
     {% for r in records %}
     <div>
@@ -18,7 +39,7 @@
     </div>
     {% endfor %}
 
-<br>
-<a href="/">返回首页</a>
+    <br>
+    <a href="/">返回首页</a>
 </body>
 </html>
