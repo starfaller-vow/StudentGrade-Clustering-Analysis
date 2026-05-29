@@ -7,19 +7,29 @@
     <h2 class="text-center mb-3">K-Means 聚类分析结果</h2>
 
     <p class="text-center text-muted mb-4">
-        系统根据学生各科成绩，将学生划分为优等生、中等生、后进生三类。
+        系统根据所选成绩列，对学生进行分群，并生成学生等级结果。
     </p>
 
     <div class="alert alert-info text-center">
-        聚类方法：K-Means 算法　|　聚类数量：3 类
+        聚类方法：K-Means / 成绩分档　|　
+        聚类数量：{{ n_clusters }} 类　|　
+        使用字段：{{ cluster_cols|join('、') }}
     </div>
 
     <div class="table-responsive">
-        {{ cluster_table|safe }}
+        {{ cluster_df.to_html(classes="table table-striped table-hover", index=False)|safe }}
     </div>
 
     <div class="mt-4 text-center">
-        <a href="javascript:history.back()" class="btn btn-primary">
+        <a href="/cluster_config" class="btn btn-warning">
+            重新配置聚类参数
+        </a>
+
+        <a href="/download_cluster" class="btn btn-success ms-2">
+            下载聚类结果
+        </a>
+
+        <a href="/visualize" class="btn btn-primary ms-2">
             返回可视化页面
         </a>
     </div>

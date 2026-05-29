@@ -10,6 +10,12 @@
         通过柱状图、折线图和散点图展示学生成绩分布与科目表现。
     </p>
 
+    {% if error_msg %}
+    <div class="alert alert-warning text-center">
+        {{ error_msg }}
+    </div>
+    {% endif %}
+
     <div class="text-center mb-4">
         <a href="/cluster" class="btn btn-info">
             进入 K-Means 聚类分析
@@ -40,22 +46,14 @@
 
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
 
-<script>
-    const data = {
-        names: ["朱佳","李思","郑君","王雪","罗明"],
-        subjects: ["C语言","Java","Python","VB","C++"],
-        scores: [
-            [75.2,93,66,85,88],
-            [86,76,96,93,67],
-            [88.8,98,76,82.25,89],
-            [99,96,91,88,86],
-            [95,96,85,63,91]
-        ],
-        totals: [407,418,263,460,430],
-        pythonScore: [66,96,76,91,85]
-    };
 
-    // 柱状图：每人各科成绩对比
+<script id="chartData" type="application/json">
+    {{ chart_data|tojson }}
+</script>
+
+<script>
+    const data = JSON.parse(document.getElementById('chartData').textContent);
+
     const barChart = echarts.init(document.getElementById('barChart'));
     let barSeries = [];
 
@@ -92,17 +90,16 @@
         yAxis: {
             type: 'value',
             min: 0,
-            max: 100
+            max: data.score_max
         },
         series: barSeries
     });
 
-    // 折线图：各科平均分
     const lineChart = echarts.init(document.getElementById('lineChart'));
 
     let avgScore = data.subjects.map((_, i) => {
         let sum = 0;
-        data.scores.forEach(s => sum += s[i]);
+        data.scores.forEach(s => sum += Number(s[i] || 0));
         return (sum / data.scores.length).toFixed(2);
     });
 
@@ -127,7 +124,7 @@
         yAxis: {
             type: 'value',
             min: 0,
-            max: 100
+            max: data.score_max
         },
         series: [
             {
@@ -144,23 +141,22 @@
         ]
     });
 
-    // 散点图：Python成绩 vs 总分
     const scatterChart = echarts.init(document.getElementById('scatterChart'));
 
     let scatterData = data.names.map((name, i) => [
-        data.pythonScore[i],
+        data.x_axis_data[i],
         data.totals[i],
         name
     ]);
 
     scatterChart.setOption({
         title: {
-            text: 'Python成绩 — 总分相关性散点图',
+            text: data.x_axis_col + '成绩 — 总分相关性散点图',
             left: 'center'
         },
         tooltip: {
             trigger: 'item',
-            formatter: params => `${params.data[2]}<br>Python：${params.data[0]}<br>总分：${params.data[1]}`
+            formatter: params => `${params.data[2]}<br>${data.x_axis_col}：${params.data[0]}<br>总分：${params.data[1]}`
         },
         grid: {
             top: 80,
@@ -169,14 +165,14 @@
             bottom: 60
         },
         xAxis: {
-            name: 'Python成绩',
-            min: 60,
-            max: 100
+            name: data.x_axis_col + '成绩',
+            min: 0,
+            max: data.score_max
         },
         yAxis: {
             name: '总分',
-            min: 250,
-            max: 470
+            min: 0,
+            max: data.total_max
         },
         series: [
             {
@@ -187,7 +183,6 @@
         ]
     });
 
-    // 页面大小变化时，图表自适应
     window.addEventListener('resize', function () {
         barChart.resize();
         lineChart.resize();
