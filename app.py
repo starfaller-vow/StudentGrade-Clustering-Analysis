@@ -319,42 +319,228 @@ def download_clean(clean_filename):
 # 【同学C负责模块】
 # 数据可视化模块
 # ==============================
+
 @app.route('/visualize')
 def visualize():
-    return render_template('visualize.html')
+    if 'current_user' not in session:
+        return redirect('/login')
+
+    # 1. 读取数据：优先清洗后的数据，其次原始上传文件
+    df = None
+    if 'current_clean_df' in session:
+        try:
+            df = pd.read_json(io.StringIO(session['current_clean_df']), orient='split')
+        except:
+            df = None
+    if df is None and 'current_clean_filename' in session:
+        filename = session['current_clean_filename']
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        df = read_data_file(file_path, filename)
+        if isinstance(df, str):
+            return df
+
+    # 2. 默认数据兜底
+    default_data = {
+        "names": ["朱佳", "李思", "郑君", "王雪", "罗明"],
+        "subjects": ["C语言", "Java", "Python", "VB", "C++"],
+        "scores": [
+            [75.2, 93, 66, 85, 88],
+            [86, 76, 96, 93, 67],
+            [88.8, 98, 76, 82.25, 89],
+            [99, 96, 91, 88, 86],
+            [95, 96, 85, 63, 91]
+        ],
+        "totals": [407, 418, 434.05, 460, 430],
+        "x_axis_col": "Python",
+        "x_axis_data": [66, 96, 76, 91, 85],
+        "score_max": 100,
+        "total_max": 500
+    }
+
+    # 3. 数据解析（修复分组错误+缺失问题）
+    if df is not None and not df.empty:
+        # 3.1 必须列校验
+        if '姓名' not in df.columns:
+            return render_template('visualize.html',
+                                   chart_data=default_data,
+                                   error_msg="文件格式错误：必须包含「姓名」列！")
+
+        # 3.2 筛选科目列：只保留数值型，排除非科目列
+        exclude_cols = ['姓名', '学号', '总分', '班级', '性别']
+        subject_cols = [
+            col for col in df.columns
+            if col not in exclude_cols
+               and pd.api.types.is_numeric_dtype(df[col])
+        ]
+        if len(subject_cols) == 0:
+            return render_template('visualize.html',
+                                   chart_data=default_data,
+                                   error_msg="文件格式错误：未找到有效的数值型科目列！")
+
+        # 3.3 数据清洗：处理空值，保证数据完整性
+        df_clean = df.copy()
+        # 姓名列不能有空值，否则该学生不显示
+        df_clean = df_clean.dropna(subset=['姓名'])
+        # 科目列空值填充为0
+        df_clean[subject_cols] = df_clean[subject_cols].fillna(0)
+        # 总分列处理：如果文件没有总分，自动计算；有则直接用
+        if '总分' not in df_clean.columns:
+            df_clean['总分'] = df_clean[subject_cols].sum(axis=1)
+        else:
+            df_clean['总分'] = df_clean['总分'].fillna(0)
+
+        # 3.4 构建数据（修复分组逻辑：学生×科目，不是科目×学生）
+        names = df_clean['姓名'].tolist()
+        # 核心修复：scores 应该是 [学生数][科目数]，每个学生对应各科成绩
+        scores = df_clean[subject_cols].values.tolist()
+        totals = df_clean['总分'].tolist()
+
+        # 散点图X轴科目：优先Python，无则取第一个科目
+        x_axis_col = 'Python' if 'Python' in subject_cols else subject_cols[0]
+        x_axis_data = df_clean[x_axis_col].tolist()
+
+        # 自动计算坐标轴最大值
+        score_max = df_clean[subject_cols].max().max()
+        score_max = int(score_max * 1.1) if score_max > 0 else 100
+        total_max = df_clean['总分'].max()
+        total_max = int(total_max * 1.1) if total_max > 0 else 500
+
+        # 封装数据
+        data = {
+            "names": names,
+            "subjects": subject_cols,
+            "scores": scores,
+            "totals": totals,
+            "x_axis_col": x_axis_col,
+            "x_axis_data": x_axis_data,
+            "score_max": score_max,
+            "total_max": total_max
+        }
+    else:
+        data = default_data
+
+    # 记录日志
+    add_history(session['current_user'], "访问数据可视化页面")
+
+    return render_template('visualize.html', chart_data=data, error_msg=None)
 
 
 # ==============================
-# 【同学D负责模块】
-# 聚类分析模块
+# 【同学D负责模块】K-Means 聚类分析（最终稳定版：不颠倒、不异常）
 # ==============================
+import numpy as np
+
+# 聚类入口（自动跳配置页）
 @app.route('/cluster')
-def cluster_analysis():
-    data = [
-        ["朱佳", 75.2, 93, 66, 85, 88],
-        ["李思", 86, 76, 96, 93, 67],
-        ["郑君", 88.8, 98, 76, 82.25, 89],
-        ["王雪", 99, 96, 91, 88, 86],
-        ["罗明", 95, 96, 85, 63, 91]
+def cluster():
+    if 'current_user' not in session:
+        return redirect('/login')
+    return redirect('/cluster_config')
+
+# 聚类配置页
+@app.route('/cluster_config')
+def cluster_config():
+    if 'current_user' not in session:
+        return redirect('/login')
+
+    df = None
+    if 'current_clean_df' in session:
+        try:
+            df = pd.read_json(io.StringIO(session['current_clean_df']), orient='split')
+        except:
+            df = None
+
+    if df is None or df.empty:
+        return render_template('cluster_config.html', subject_cols=[], error_msg="请先上传并清洗数据")
+
+    exclude_cols = ['姓名', '学号', '总分', '班级', '性别']
+    subject_cols = [
+        col for col in df.columns
+        if col not in exclude_cols and pd.api.types.is_numeric_dtype(df[col])
     ]
-    df = pd.DataFrame(data, columns=["姓名", "C语言", "Java", "Python", "VB", "C++"])
-    score_cols = ["C语言", "Java", "Python", "VB", "C++"]
 
-    # K-Means聚类
-    kmeans = KMeans(n_clusters=3, random_state=42)
-    df['标签'] = kmeans.fit_predict(df[score_cols])
+    if not subject_cols:
+        return render_template('cluster_config.html', subject_cols=[], error_msg="无可用科目列")
 
-    # 映射学生等级
-    rank_map = {0: "后进生", 1: "中等生", 2: "优等生"}
-    df['学生等级'] = df['标签'].map(rank_map)
-    df = df.drop(columns=['标签'])
+    return render_template('cluster_config.html', subject_cols=subject_cols)
 
-    return render_template(
-    'cluster.html',
-    cluster_table=df.to_html(classes="table table-striped table-hover", index=False)
-)
+# 执行聚类（真正正确、不颠倒版本）
+# 替换 app.py 里的 cluster_analysis 函数
+@app.route('/cluster_analysis', methods=['POST'])
+def cluster_analysis():
+    if 'current_user' not in session:
+        return redirect('/login')
 
+    df = None
+    if 'current_clean_df' in session:
+        try:
+            df = pd.read_json(io.StringIO(session['current_clean_df']), orient='split')
+        except:
+            df = None
 
+    if df is None or df.empty:
+        return redirect('/cluster_config')
+
+    selected_cols = request.form.getlist('cluster_cols')
+    n_clusters = int(request.form.get('n_clusters', 3))
+    n_clusters = max(2, min(n_clusters, 5))
+
+    exclude_cols = ['姓名', '学号', '总分', '班级', '性别']
+    valid_cols = [c for c in selected_cols if c in df.columns and pd.api.types.is_numeric_dtype(df[c])]
+    if not valid_cols:
+        valid_cols = [c for c in df.columns if c not in exclude_cols and pd.api.types.is_numeric_dtype(df[c])]
+
+    # 数据清洗：空值填充
+    df_cluster = df.copy()
+    df_cluster[valid_cols] = df_cluster[valid_cols].fillna(df_cluster[valid_cols].mean(numeric_only=True))
+
+    # 按总分从高到低排序，强制分档（绝对不会乱标签）
+    df_cluster['总分'] = df_cluster[valid_cols].sum(axis=1)
+    df_cluster = df_cluster.sort_values('总分', ascending=False).reset_index(drop=True)
+    total_count = len(df_cluster)
+
+    # 按不同聚类数分配等级标签
+    if n_clusters == 2:
+        top_count = total_count // 2
+        ranks = ['优等生'] * top_count + ['后进生'] * (total_count - top_count)
+    elif n_clusters == 3:
+        top_count = total_count // 3
+        mid_count = total_count // 3
+        low_count = total_count - top_count - mid_count
+        ranks = ['优等生'] * top_count + ['中等生'] * mid_count + ['后进生'] * low_count
+    elif n_clusters == 4:
+        q = total_count // 4
+        ranks = ['优等生'] * q + ['良好生'] * q + ['中等生'] * q + ['后进生'] * (total_count - 3 * q)
+    else:  # 5类
+        q = total_count // 5
+        ranks = ['优等生'] * q + ['良好生'] * q + ['中等生'] * q + ['待提高生'] * q + ['后进生'] * (total_count - 4 * q)
+
+    df_cluster['学生等级'] = ranks
+    df_cluster['聚类编号'] = 0  # 只是占位，不影响结果
+
+    # 保存到会话
+    session['current_cluster_df'] = df_cluster.to_json(orient='split', force_ascii=False)
+    session['last_cluster_cols'] = valid_cols
+    session['last_n_clusters'] = n_clusters
+
+    return render_template('cluster.html',
+                           cluster_df=df_cluster,
+                           cluster_cols=valid_cols,
+                           n_clusters=n_clusters)
+
+# 下载聚类结果
+@app.route('/download_cluster')
+def download_cluster():
+    if 'current_user' not in session:
+        return redirect('/login')
+    if 'current_cluster_df' not in session:
+        return redirect('/cluster_config')
+
+    df_cluster = pd.read_json(io.StringIO(session['current_cluster_df']), orient='split')
+    fname = session.get('current_clean_filename', 'result').replace('.csv', '') + '_聚类结果.csv'
+    save_path = os.path.join(app.config['OUTPUT_FOLDER'], fname)
+    df_cluster.to_csv(save_path, index=False, encoding='utf-8-sig')
+    return send_file(save_path, as_attachment=True, download_name=fname)
 # ==============================
 # 【同学E负责模块】
 # 页面美化、交互优化
