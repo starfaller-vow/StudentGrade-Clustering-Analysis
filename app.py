@@ -312,8 +312,7 @@ def download_clean(clean_filename):
     if 'current_user' in session:
         add_history(session['current_user'], f"导出清洗文件：{clean_filename}")
 
-    return f'<h3>✅ 文件已成功保存</h3><p>路径：outputs/{clean_filename}</p><a href="/">返回首页</a>'
-
+    return render_template("download.html",filename=clean_filename)
 
 # ==============================
 # 【同学C负责模块】
