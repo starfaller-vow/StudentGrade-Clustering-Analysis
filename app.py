@@ -493,30 +493,45 @@ def cluster_analysis():
     df_cluster = df.copy()
     df_cluster[valid_cols] = df_cluster[valid_cols].fillna(df_cluster[valid_cols].mean(numeric_only=True))
 
-    # 按总分从高到低排序，强制分档（绝对不会乱标签）
+    # 计算总分（用于后面判断哪个聚类是优等生）
     df_cluster['总分'] = df_cluster[valid_cols].sum(axis=1)
-    df_cluster = df_cluster.sort_values('总分', ascending=False).reset_index(drop=True)
-    total_count = len(df_cluster)
+    # 真正执行 KMeans
+    X = df_cluster[valid_cols]
+    kmeans = KMeans(n_clusters=n_clusters,random_state=42,n_init=10)
+    df_cluster['聚类编号'] = kmeans.fit_predict(X)
 
-    # 按不同聚类数分配等级标签
+    # 计算每个聚类平均总分
+    cluster_mean = {}
+
+    for cluster_id in range(n_clusters):
+        mean_score = df_cluster[
+            df_cluster['聚类编号'] == cluster_id]['总分'].mean()
+
+        cluster_mean[cluster_id] = mean_score
+
+# 按平均总分从高到低排序
+    sorted_cluster = sorted(
+        cluster_mean.items(),
+        key=lambda x: x[1],
+        reverse=True
+    )
+
     if n_clusters == 2:
-        top_count = total_count // 2
-        ranks = ['优等生'] * top_count + ['后进生'] * (total_count - top_count)
+        labels = ['优等生', '后进生']
     elif n_clusters == 3:
-        top_count = total_count // 3
-        mid_count = total_count // 3
-        low_count = total_count - top_count - mid_count
-        ranks = ['优等生'] * top_count + ['中等生'] * mid_count + ['后进生'] * low_count
+        labels = ['优等生', '中等生', '后进生']
     elif n_clusters == 4:
-        q = total_count // 4
-        ranks = ['优等生'] * q + ['良好生'] * q + ['中等生'] * q + ['后进生'] * (total_count - 3 * q)
+        labels = ['优等生', '良好生', '中等生', '后进生']
     else:  # 5类
-        q = total_count // 5
-        ranks = ['优等生'] * q + ['良好生'] * q + ['中等生'] * q + ['待提高生'] * q + ['后进生'] * (total_count - 4 * q)
+        labels = ['优等生', '良好生', '中等生', '待提高生', '后进生']
 
-    df_cluster['学生等级'] = ranks
-    df_cluster['聚类编号'] = 0  # 只是占位，不影响结果
+    # 聚类编号 -> 学生等级
+    label_map = {}
 
+    for i, (cluster_id, _) in enumerate(sorted_cluster):
+        label_map[cluster_id] = labels[i]
+
+    df_cluster['学生等级'] = df_cluster['聚类编号'].map(label_map)
     # 保存到会话
     session['current_cluster_df'] = df_cluster.to_json(orient='split', force_ascii=False)
     session['last_cluster_cols'] = valid_cols
